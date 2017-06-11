@@ -12,9 +12,8 @@
 #include <errno.h>
 #include <sstream>
 
-#include <boost/iostreams/device/mapped_file.hpp>
 #include <exception>
-
+#include <unistd.h>
 
 struct MappedArrayException: public std::exception{
     std::string message;
