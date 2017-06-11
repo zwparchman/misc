@@ -1,4 +1,4 @@
-#define cimg_display 0
+//#define cimg_display 0
 
 #include <iostream>
 #include <vector>
@@ -8,6 +8,8 @@
 #include <assert.h>
 
 #include <boost/program_options.hpp>
+
+#include "MappedArray.hpp"
 
 #include "Timer.hpp"
 
@@ -56,20 +58,23 @@ struct Matrix_exception: public std::exception{};
 
 template <typename T>
 struct Matrix{
-    std::vector<T> arr;
+    MappedArray<T> arr;
 
     size_t rows, cols;
 
-    Matrix(std::initializer_list<std::initializer_list<T>> lst){
+    Matrix(std::initializer_list<std::initializer_list<T>> lst):
+            arr(lst.size()*(lst.begin()->size()),"kronmul_XXXXXX"){
         cols = lst.size();
         rows = lst.begin()->size();
+        size_t index=0;
         for( auto row_data : lst){
             if( row_data.size() != rows ){
                 throw Matrix_exception();
             }
 
             for( auto val : row_data ){
-                arr.push_back(val);
+                arr[index]=val;
+                index++;
             }
         }
     }
@@ -85,14 +90,15 @@ struct Matrix{
         }
     }
 
-    Matrix(size_t rr, size_t cc){
-        rows = rr;
-        cols = cc;
-        arr.resize(rr*cc);
+    Matrix(size_t rr, size_t cc, std::string backing) : 
+        arr(rr*cc,backing),
+        rows(rr), 
+        cols(cc)
+    {
     }
 
-    static Matrix kronecker_product( Matrix<T> &a, Matrix<T> &b){
-        Matrix ret(a.rows*b.rows, a.cols *b.cols);
+    static Matrix kronecker_product( Matrix<T> &a, Matrix<T> &b, std::string backing){
+        Matrix ret(a.rows*b.rows, a.cols *b.cols, backing);
 
 #pragma omp parallel for
         for( size_t brow=0; brow < b.rows; brow++){
@@ -121,11 +127,15 @@ struct Matrix{
 
 using namespace std;
 
-Matrix<float> kpower(Matrix<float> a, int power){
+Matrix<float> kpower(Matrix<float> a, int power, std::string fname){
     Matrix<float>b=a;
 
     for(int i=0; i<power; i++){
-        a = Matrix<float>::kronecker_product(a,b);
+        std::string backing="kpower_XXXXXX";
+        if(i+1==power){
+            backing=fname;
+        }
+        a = Matrix<float>::kronecker_product(a,b, backing);
     }
     a.do_power(1/(float)power);
     return a;
@@ -178,9 +188,9 @@ int main(int argc, char **argv){
     Timer power_timer;
     power_timer.start();
 
-    Matrix<float> r = kpower(a1, raise);
-    Matrix<float> g = kpower(a2,raise);
-    Matrix<float> b = kpower(a3,raise);
+    Matrix<float> r = kpower(a1, raise, "red");
+    Matrix<float> g = kpower(a2,raise, "green");
+    Matrix<float> b = kpower(a3,raise, "blue");
     power_timer.stop();
 
     std::cout<<"Time taken to generate data: "<<std::to_string(power_timer.getTime())<<" seconds"<<std::endl;
@@ -201,10 +211,10 @@ int main(int argc, char **argv){
         }
     }
     if(args.count("display")){
-        //image.display();
+        image.display();
     }
 
-    if(args.count("bmp")){
+    if(out_name.size()){
         image.save_bmp(out_name.c_str());
     }
 }

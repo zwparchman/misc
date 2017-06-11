@@ -1,8 +1,8 @@
-OFLAGS =  -DNDEBUG -fopenmp  -O3
+OFLAGS =  -fopenmp  #-O3 -DNDEBUG 
 CC=g++
-STD=-std=c++14
+STD=-std=c++17 -D_GNU_SOURCE
 CFLAGS= -g -c -W -Wall -Wextra $(STD) -Wno-missing-field-initializers -Wshadow $(OFLAGS)
-LFLAGS= -g $(STD) $(OFLAGS) -L/home/zack/lib/ -lX11 -pthread  -lboost_program_options --static
+LFLAGS= -g $(STD) $(OFLAGS) -L/home/zack/lib/ -lX11 -pthread  -lboost_program_options 
 
 .PHONY:clean 
 
@@ -13,7 +13,7 @@ all : $(Objects) program
 program : $(Objects)
 	$(CC) $(Std) $(Objects) $(LFLAGS)  -o program
 
-$(Objects): %.o: %.cpp
+$(Objects): %.o: %.cpp MappedArray.hpp
 	$(CC) $(CFLAGS) $<
 
 dbg: program
