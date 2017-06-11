@@ -83,6 +83,15 @@ struct MappedArray{
         return *ret;
     }
 
+    void close(){
+        int ret = munmap(base, sizeof(T)*size);
+        if(ret){
+            perror("Error when unmaping mapped array: ");
+        }
+        ::close(fd);
+        size=0;
+    }
+
         /*  Just leak since fixing this properly is a pain
     ~MappedArray(){
         int ret = munmap(base, sizeof(T)*size);

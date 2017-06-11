@@ -14,7 +14,7 @@
 #include "Timer.hpp"
 
 #pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wshadow"
+#pragma GCC diagnostic ignored "-Wshadow" 
 #include "CImg.h"
 #pragma GCC diagnostic pop
 
@@ -62,6 +62,17 @@ struct Matrix{
 
     size_t rows, cols;
 
+    Matrix(Matrix &other):
+        arr(other.rows * other.cols, "Matrix_XXXXXX"),
+        rows(other.rows),
+        cols(other.cols)
+    {
+#pragma omp parallel for
+        for(size_t i=0; i<arr.size; i++){
+            arr[i]=other.arr[i];
+        }
+    }
+
     Matrix(std::initializer_list<std::initializer_list<T>> lst):
             arr(lst.size()*(lst.begin()->size()),"kronmul_XXXXXX"){
         cols = lst.size();
@@ -77,6 +88,12 @@ struct Matrix{
                 index++;
             }
         }
+    }
+
+    void close(){
+        arr.close();
+        rows=0;
+        cols=0;
     }
 
     template <typename F>
@@ -128,14 +145,17 @@ struct Matrix{
 using namespace std;
 
 Matrix<float> kpower(Matrix<float> a, int power, std::string fname){
-    Matrix<float>b=a;
+    Matrix<float>b(a);
+    Matrix<float>c(a);
 
     for(int i=0; i<power; i++){
         std::string backing="kpower_XXXXXX";
         if(i+1==power){
             backing=fname;
         }
-        a = Matrix<float>::kronecker_product(a,b, backing);
+        c = Matrix<float>::kronecker_product(a,b, backing);
+        a.close();
+        a=c;
     }
     a.do_power(1/(float)power);
     return a;
@@ -188,9 +208,16 @@ int main(int argc, char **argv){
     Timer power_timer;
     power_timer.start();
 
-    Matrix<float> r = kpower(a1, raise, "red");
-    Matrix<float> g = kpower(a2,raise, "green");
-    Matrix<float> b = kpower(a3,raise, "blue");
+    Matrix<float>r{{1}},g{{1}},b{{1}};
+#pragma omp sections
+    {
+#pragma omp section
+        r = kpower(a1, raise, "red");
+#pragma omp section
+        g = kpower(a2,raise, "green");
+#pragma omp section
+        b = kpower(a3,raise, "blue");
+    }
     power_timer.stop();
 
     std::cout<<"Time taken to generate data: "<<std::to_string(power_timer.getTime())<<" seconds"<<std::endl;
