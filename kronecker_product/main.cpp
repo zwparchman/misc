@@ -18,6 +18,8 @@
 #include "CImg.h"
 #pragma GCC diagnostic pop
 
+#define TMP_PREFIX "/tmp/"
+
 namespace zack{
 
 template<typename T>
@@ -63,7 +65,7 @@ struct Matrix{
     size_t rows, cols;
 
     Matrix(Matrix &other):
-        arr(other.rows * other.cols, "Matrix_XXXXXX"),
+        arr(other.rows * other.cols, TMP_PREFIX "Matrix_XXXXXX"),
         rows(other.rows),
         cols(other.cols)
     {
@@ -74,7 +76,7 @@ struct Matrix{
     }
 
     Matrix(std::initializer_list<std::initializer_list<T>> lst):
-            arr(lst.size()*(lst.begin()->size()),"kronmul_XXXXXX"){
+            arr(lst.size()*(lst.begin()->size()),TMP_PREFIX "kronmul_XXXXXX"){
         cols = lst.size();
         rows = lst.begin()->size();
         size_t index=0;
@@ -149,7 +151,7 @@ Matrix<float> kpower(Matrix<float> a, int power, std::string fname){
     Matrix<float>c(a);
 
     for(int i=0; i<power; i++){
-        std::string backing="kpower_XXXXXX";
+        std::string backing=TMP_PREFIX "kpower_XXXXXX";
         if(i+1==power){
             backing=fname;
         }
